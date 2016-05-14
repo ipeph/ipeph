@@ -1,0 +1,66 @@
+#wcsub-box {
+    box-shadow: 1px 2px 4px #444444;
+    margin-bottom: 7px;
+    border: 3px solid #888;
+}
+#wc-socico {
+    background: none repeat scroll 0 0 #fff;
+    border-bottom: 1px solid #dcdcdc;
+    border-left: 1px solid #dcdcdc;
+    border-right: 1px solid #dcdcdc;
+    padding: 10px;
+}
+#wc-socicoimg {
+    height: 28px;
+}
+#wc-socico table {
+    border: medium none;
+}
+#wc-rscount {
+    margin-right: -25px;
+    margin-top: 2px;
+}
+#wcsub-box .wcsub-fblike {
+    background: none repeat scroll 0 0 #fff;
+    border-bottom: 1px solid #dcdcdc;
+    border-left: 1px solid #dcdcdc;
+    border-right: 1px solid #dcdcdc;
+    padding: 5px;
+}
+#wcsub-box .twitter-follow {
+    background: none repeat scroll 0 0 #fff;
+    border-left: 1px solid #dcdcdc;
+    border-right: 1px solid #dcdcdc;
+    padding: 12px 11px;
+}
+#wcsub-box .wcsub-email {
+    background: none repeat scroll 0 0 #eaeaea;
+    border: 3px solid #dcdcdc;
+    padding: 11px;
+}
+#wcsub-box .wcsub-email h4 {
+    color: #444;
+    font-size: 12px;
+    margin: 0 0 10px;
+}
+#wcsub-box .wcsub-email .txt, #wcsub-box .wcsub-email .txt:focus {
+    background: none repeat scroll 0 0 #fff;
+    border: 1px solid #dcdcdc;
+    border-radius: 3px;
+    color: #777777;
+    float: left;
+    padding: 7px 10px 8px;
+    width: 204px;
+}
+#wcsub-box .wcsub-email .wcsub-button, #wcsub-box .wcsub-email .wcsub-button:focus {
+    background: none repeat scroll 0 0 #43a2fa;
+    border: 1px solid #eaeaea;
+    border-radius: 3px;
+    color: #fff;
+    float: right;
+    font-size: 12px;
+    font-weight: bold;
+}
+#wcsub-box .wcsub-email input, textarea {
+    font-size: 1em;
+}
