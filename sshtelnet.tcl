@@ -99,3 +99,41 @@ send "show version\r"
 expect "#"
 send "exit\r"
 
+*********************************************
+
+ERROR
+
+*********************************************
+
+[linux]$ ./sshtelnet.tcl febry password 1.1.1.1
+spawn ssh mine@1.1.1.1
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+Someone could be eavesdropping on you right now (man-in-the-middle attack)!
+It is also possible that the RSA host key has just been changed.
+The fingerprint for the RSA key sent by the remote host is
+83:24:a5:c4:2c:98:0d:0b:d6:ad:cb:74:12:7e:84:83.
+Please contact your system administrator.
+Add correct host key in /home/svc_netlog_id/.ssh/known_hosts to get rid of this message.
+Offending key in /home/svc_netlog_id/.ssh/known_hosts:152
+RSA host key for 1.1.1.1 has changed and you have requested strict checking.
+Host key verification failed.
+here
+/home/svc_netlog_id/.ssh/known_hosts updated.
+Original contents retained as /home/svc_netlog_id/.ssh/known_hosts.old
+    while executing
+"exec ssh-keygen -R $hostname"
+    invoked from within
+"expect {
+	    "continue connecting (yes/no)?" {
+	    	send "yes\r"
+	    	exp_continue
+	    }
+		"Connection refused" {
+			connecttelnet $username $pass..."
+    (procedure "connectssh" line 5)
+    invoked from within
+"connectssh $username $password $hostname"
+    (file "./sshtelnet.tcl" line 91)
