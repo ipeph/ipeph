@@ -99,11 +99,7 @@ send "show version\r"
 expect "#"
 send "exit\r"
 
-*********************************************
-
 ERROR
-
-*********************************************
 
 [linux]$ ./sshtelnet.tcl febry password 1.1.1.1
 spawn ssh mine@1.1.1.1
