@@ -1,619 +1,289 @@
-#This template is imported from device "sw-agg1" with serial "TW11KM00B0"
+#This template is imported from device "sw-edge2" with serial "SG00KN5019"
 
-! IACA - lab 11 EVPN
+! 
+! template includes static configuration of edge switches without any need for vars
+! goal is to support students that want to move on and don't want to set the json vars file.
+! only using hostname as a variable condition
+! MUST use sw-edge1 and sw-edge2 as hostnames (use ZTP or manually set the var).
 !
-!Version ArubaOS-CX GL.10.09.0010
+!Version ArubaOS-CX FL.10.09.1040
 !export-password: default
 hostname %_sys_hostname%
 user admin group administrators password plaintext Aruba123!
 cli-session
     timeout 43200
-router vrrp disable
-profile leaf
-ntp server pool.ntp.org minpoll 4 maxpoll 4 iburst
-ntp enable
-ntp vrf mgmt
 !
 !
 !
 !
+radius-server host cppm.aruba-training.com key ciphertext AQBapTjm3+3uP95qPMMZpf1TiDVJvWcfeLM9kDVHcMSsavmoCQAAAI93dwaxRjUaVw==
 !
-ssh server vrf mgmt
+!
+aaa group server radius pa
+    server cppm.aruba-training.com
+!
+aaa accounting port-access start-stop interim 10 group pa
+!
+!
+!
+user admin authorized-key ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAiE5q4RBVt/mIjc59TpCOWZVGoj6ROtuxvViUgIu5kLe9D0CojEv/usKdl9BagyPGS3h8GbClngzIViw9AfDBpnYFWgBjUIMh8I2P5V0hSjeQ/mIneCh4LVmfE/MHPIxr+rtugH6g4V8iCUWThVdyGIrkTi+mJT176VReE9/9V8JAiflvNmgUMbkFEHw/tl903Z0OdjLcphjov1Phgt4FnSb7O1Hs7hVlDirPlN9w6RYsEwfZxveXeSFuoiEVdeIuurdSalNJkxAxwYHaPXcSjH4xuGT09tADCwBL4nOmzPqM9so93tADEza1xJ7NiW/hDqBvVNk0Lmoyesfje+XGow== aos-cx-admin
 ssh server vrf default
-vlan 1-4,11-15,21-25,31-35,41-45,51-55
-spanning-tree
-%if _sys_hostname=sw-agg1%
-spanning-tree priority 0
-    %endif%
-%if _sys_hostname=sw-agg2%
-spanning-tree priority 1
-    %endif%
+ssh server vrf mgmt
+vsf member 1 
+ %if model%
+  type %model% 
+ %else%
+   type jl666a
+ %endif%
+class ip any
+    10 match any any any
+class ip critical-servers
+    10 match any any 10.1.0.0/255.255.255.0 count
+vlan 1
+vlan 3
+    name v3-mgmt
+vlan 4
+    name v4-ap-mgmt
+vlan 11-15,21-25,4001
 
+spanning-tree
 interface mgmt
     no shutdown
-%if _sys_hostname=sw-agg1%
-    ip static 10.251.1.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip static 10.251.1.3/24
-    %endif%
-
-######## per switch interface config
-### sw-agg1
-%if _sys_hostname=sw-agg1%
-interface 1/1/1
-    description sw-edge1-g1/1/27
-interface 1/1/2
-    description sw-edge2-g1/1/27
-interface 1/1/5
-    description gw1-g0/0/1
-interface 1/1/8
-    no shutdown
-    description rtr-core1-1/1/1
-    ip address 10.254.101.2/24
-    ip ospf 1 area 0.0.0.1
-    no ip ospf passive
-    ip ospf network point-to-point
-interface 1/1/10
-    description gw2-g0/0/1
-interface 1/1/15
-    description sw-agg2-g1/1/15
-interface 1/1/16
-    description sw-agg2-g1/1/16
-
-%endif%
-
-### sw-agg2
-%if _sys_hostname=sw-agg2%
-interface 1/1/1
-    description sw-edge1-g1/1/28
-interface 1/1/2
-    description sw-edge2-g1/1/28
-interface 1/1/5
-    description gw1-g0/0/2
-interface 1/1/8
-    no shutdown
-    description rtr-core1-1/1/2
-    ip address 10.254.102.3/24
-    ip ospf 1 area 0.0.0.1
-    no ip ospf passive
-    ip ospf network point-to-point
-interface 1/1/10
-    description gw2-g0/0/2
-interface 1/1/15
-    description sw-agg1-g1/1/15
-interface 1/1/16
-    description sw-agg1-g1/1/16
-
-%endif%
-
-
-######## shared interface configuration
-interface 1/1/1-1/1/16
-    mtu 9198
-
-interface lag 1 multi-chassis
-    description sw-edge1
-    no shutdown
-    no routing
-    vlan trunk native 1
-    vlan trunk allowed 1,3-4,11-15,21-25
-    lacp mode active
-    lacp fallback
-interface lag 2 multi-chassis
-    description sw-edge2
-    no shutdown
-    no routing
-    vlan trunk native 1
-    vlan trunk allowed 1,3-4,11-15,21-25
-    lacp mode active
-    lacp fallback
-interface lag 5 multi-chassis
-    description gw1
-    no shutdown
-    no routing
-    vlan trunk native 1
-    vlan trunk allowed 3,31-35,41-45
-    lacp mode active
-    lacp fallback
-	# bpdu-filter required > factory default gw has stp enabled
-	# sets port g0/0/1 to fw, g0/0/2 to block
-	# g0/0/1 is static provisioning port (not member of vlan 4094)
-	# g0/0/2 is member of vlan 4094 / svi 4094, but that svi stays down
-	# if g0/0/2 is in blocking state.
-    spanning-tree bpdu-filter
-#    spanning-tree rpvst-filter
-    spanning-tree port-type admin-edge
-interface lag 10 multi-chassis
-    description gw2
-    no shutdown
-    no routing
-    vlan trunk native 1
-    vlan trunk allowed 3,31-35,41-45
-    lacp mode active
-    lacp fallback
-    spanning-tree bpdu-filter
-#    spanning-tree rpvst-filter
-    spanning-tree port-type admin-edge
+    ip dhcp
+ubt-client-vlan 4001
+ubt zone campus-main vrf default
+    primary-controller ip 10.1.3.21
+    enable
+port-access policy contractor
+    10 class ip critical-servers action drop
+    20 class ip any
+# removed for evpn lab
+#port-access role contractor
+#    gateway-zone zone campus-main gateway-role contractor-wired
+#    vlan access 22
+port-access role dev-ap
+    auth-mode device-mode
+    vlan trunk native 4
+    vlan trunk allowed 4,11-15
+port-access role phone
+    vlan access 23
+aaa authentication port-access dot1x authenticator
+    radius server-group pa
+    enable
+aaa authentication port-access mac-auth
+    radius server-group pa
+    enable
 interface lag 256
-    description peer-vsx
     no shutdown
     no routing
     vlan trunk native 1
-    vlan trunk allowed all
+    vlan trunk allowed 1,3-4,11-15,21-25
     lacp mode active
-	
 interface 1/1/1
+    shutdown
+    no routing
+%if _sys_hostname=sw-edge1%
     no shutdown
-    lag 1
+    vlan access 21
+    description pc1
+    aaa authentication port-access client-limit 4
+    aaa authentication port-access mac-auth
+        enable
+%endif%
+    vlan access 1
 interface 1/1/2
     no shutdown
-    lag 2
+    description ap
+    no routing
+    vlan access 21
+    aaa authentication port-access mac-auth
+        enable
+interface 1/1/3
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/4
+    shutdown
+    no routing
+%if _sys_hostname=sw-edge2%
+    no shutdown
+    vlan access 21
+    description pc4
+    port-access onboarding-method concurrent enable
+    aaa authentication port-access client-limit 4
+    aaa authentication port-access dot1x authenticator
+        eapol-timeout 30
+        max-eapol-requests 1
+        max-retries 1
+        enable
+    aaa authentication port-access mac-auth
+        enable
+%endif%
+
 interface 1/1/5
-    no shutdown
-    lag 5
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/6
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/7
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/8
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/9
+    shutdown
+    no routing
+    vlan access 1
 interface 1/1/10
-    no shutdown
-    lag 10
-
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/11
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/12
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/13
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/14
+    shutdown
+    no routing
+    vlan access 1
 interface 1/1/15
-    no shutdown
-    lag 256
+    shutdown
+    no routing
+    vlan access 1
 interface 1/1/16
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/17
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/18
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/19
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/20
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/21
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/22
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/23
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/24
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/25
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/26
+    shutdown
+    no routing
+    vlan access 1
+interface 1/1/27
     no shutdown
+    description sw-agg1
     lag 256
+interface 1/1/28
+    no shutdown
+    description sw-agg2
+    lag 256
+interface vlan 1
+! leaving ip dhcp active on SVI1, in case student has different hostname set, SVI1 will still provide Central access as backup.
+    ip dhcp
 
-#################################
-### L3 configuration
+! ####### start mgmt config
+vlan 3
+ name v3-mgmt
+interface vlan 3
+ %if _sys_hostname=sw-edge1%
+  ip address 10.1.3.4/24
+  ip route 0.0.0.0/0 10.1.3.1
+ ip source-interface all interface vlan3
+ %endif%
+ %if _sys_hostname=sw-edge2%
+  ip address 10.1.3.5/24
+  ip route 0.0.0.0/0 10.1.3.1
+ ip source-interface all interface vlan3
+%endif%
+! ####### end mgmt config
+
+ip dns host cppm.aruba-training.com 10.254.1.23
+ip dns server-address 10.254.1.21
+
+!
+!
+!
+!
+!
+https-server vrf default
+https-server vrf mgmt
+
+
+############################################
+# EVPN - sw-edge1
+%if _sys_hostname=sw-edge1%
 
 interface loopback 0
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.0.2/32
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.0.3/32
-    %endif%
-    ip ospf 1 area 0.0.0.1
-interface vlan 1
-    description v01-ztp
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.1.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.1.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.1.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1	
-	
-interface vlan 2
-    description v02-l3-vsx-routed-link
-	%if _sys_hostname=sw-agg1%
-    ip address 10.1.2.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.2.3/24
-    %endif%
-    ip ospf 1 area 0.0.0.1
-    no ip ospf passive
-    ip ospf network point-to-point
-
-interface vlan 3
-    description v03-mgmt
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.3.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.3.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.3.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-    no ip ospf passive
-
-interface vlan 4
-    description v04-ap-mgmt
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.4.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.4.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.4.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 11
-    description v11-wifi-bridge-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.11.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.11.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.11.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 12
-    description v12-wifi-bridge-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.12.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.12.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.12.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 13
-    description v13-wifi-bridge-voice
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.13.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.13.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.13.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 14
-    description v14-wifi-bridge-iot
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.14.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.14.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.14.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 15
-    description v15-wifi-bridge-guest
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.15.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.15.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.15.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 21
-    description v21-wired-bridge-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.21.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.21.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.21.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 22
-    description v22-wired-bridge-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.22.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.22.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.22.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 23
-    description v23-wired-bridge-voice
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.23.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.23.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.23.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 24
-    description v24-wired-bridge-iot
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.24.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.24.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.24.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 25
-    description v25-wired-bridge-guest
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.25.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.25.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.25.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 31
-    description v31-wifi-tun-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.31.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.31.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.31.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-
-interface vlan 32
-    description v32-wifi-tun-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.32.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.32.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.32.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 33
-    description v33-wifi-tun-voice
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.33.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.33.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.33.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 34
-    description v34-wifi-tun-iot
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.34.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.34.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.34.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 35
-    description v35-wifi-tun-guest
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.35.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.35.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.35.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 41
-    description v41-wired-tun-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.41.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.41.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.41.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-
-interface vlan 42
-    description v42-wired-tun-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.42.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.42.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.42.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 43
-    description v43-wired-tun-voice
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.43.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.43.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.43.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 44
-    description v44-wired-tun-iot
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.44.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.44.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.44.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 45
-    description v45-wired-tun-guest
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.45.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.45.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.45.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-
-
-interface vlan 52
-    description v52-evpn-wired-employee
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.52.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.52.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.52.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 53
-    description v53-evpn-wired-voice
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.53.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.53.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.53.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 54
-    description v54-evpn-wired-iot
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.54.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.54.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.54.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-interface vlan 55
-    description v55-evpn-wired-guest
-%if _sys_hostname=sw-agg1%
-    ip address 10.1.55.2/24
-    %endif%
-%if _sys_hostname=sw-agg2%
-    ip address 10.1.55.3/24
-    %endif%
-    active-gateway ip mac 12:01:00:00:01:00
-    active-gateway ip 10.1.55.1
-    ip helper-address 10.254.1.21
-    ip ospf 1 area 0.0.0.1
-
-
-
-
-
-vsx
-    inter-switch-link lag 256
-	system-mac 02:01:00:00:01:00
-%if _sys_hostname=sw-agg1%
-    role primary
-    %endif%
-%if _sys_hostname=sw-agg2%
-    role secondary
-    %endif%    
-ip dns server-address 10.254.1.21
-!
-!
-!
-mirror session 1
-%if _sys_hostname=sw-agg1%
-    destination tunnel 10.254.1.90 source 10.1.0.2
-    %endif%
-%if _sys_hostname=sw-agg2%
-    destination tunnel 10.254.1.90 source 10.1.0.3
-    %endif%
-    source interface lag5 both
-    source interface lag10 both
-    disable
-!
-!
-!
+ ip address 10.1.0.4/32
+ ip ospf 1 area 0
+ exit
 router ospf 1
-%if _sys_hostname=sw-agg1%
-    router-id 10.1.0.2
-    %endif%
-%if _sys_hostname=sw-agg2%
-    router-id 10.1.0.3
-    %endif%
-    passive-interface default
-    redistribute static
-    area 0.0.0.1
-ip source-interface all interface loopback0
-https-server vrf mgmt
-https-server vrf default
-no configuration-lockout central
+ router-id 10.1.0.4
+ area 0.0.0.1
+ exit
+ 
+interface vlan 3
+ ip ospf 1 area 1
+ exit
+ 
 
-
-################################################
-
-%if _sys_hostname=sw-agg1%
 
 router bgp 65001
-    bgp router-id 10.1.0.2
-    neighbor 10.1.0.4 remote-as 65001
-    neighbor 10.1.0.4 update-source loopback 0
-    neighbor 10.1.0.5 remote-as 65001
-    neighbor 10.1.0.5 update-source loopback 0
-
+    bgp router-id 10.1.0.4
+    neighbor 10.1.0.2 remote-as 65001
+	neighbor 10.1.0.2 update-source loopback 0
     address-family l2vpn evpn
-        neighbor 10.1.0.4 activate
-        neighbor 10.1.0.4 route-reflector-client
-        neighbor 10.1.0.4 send-community both
-        neighbor 10.1.0.5 activate
-        neighbor 10.1.0.5 route-reflector-client
-        neighbor 10.1.0.5 send-community both
+        neighbor 10.1.0.2 activate
+        neighbor 10.1.0.2 send-community both
     exit-address-family
  exit
 !
 
+
 interface vxlan 1
- source ip 10.1.0.2
+ source ip 10.1.0.4
  no shutdown
  exit
+ 
  
 vlan 51
 evpn
@@ -631,26 +301,162 @@ interface vxlan 1
  exit
 
 
-#
-vrf iot
- rd 65001:1
- route-target export 65001:1 evpn
- route-target import 65001:1 evpn
+ 
+%endif%
+ 
+
+
+############################################
+# EVPN - sw-edge2
+
+ %if _sys_hostname=sw-edge2%
+interface loopback 0
+ ip address 10.1.0.5/32
+ ip ospf 1 area 0
+ exit
+router ospf 1
+ router-id 10.1.0.5
+ area 0.0.0.1
+ exit
+ 
+interface vlan 3
+ ip ospf 1 area 1
+ exit
+ 
+router bgp 65001
+    bgp router-id 10.1.0.5
+    neighbor 10.1.0.2 remote-as 65001
+	neighbor 10.1.0.2 update-source loopback 0
+    address-family l2vpn evpn
+        neighbor 10.1.0.2 activate
+        neighbor 10.1.0.2 send-community both
+    exit-address-family
+ exit
+!
+
+
+interface vxlan 1
+ source ip 10.1.0.5
+ no shutdown
  exit
 
-interface vlan 51
-    description v51-evpn-wired-employee
-    vrf attach iot
-    vsx-sync active-gateways
-    ip address 10.1.51.2/24
-    active-gateway ip mac 02:00:00:00:00:01
-    active-gateway ip 10.1.51.1
-    ip helper-address 10.254.1.21
 
-#### static route leaking
-ip route 0.0.0.0/0 1/1/8 vrf iot
-ip route 10.1.51.0/24 vlan51
+vlan 51
+evpn
+ vlan 51
+  rd auto
+  route-target export auto
+  route-target import auto
+  exit
+ exit
+
+interface vxlan 1
+ vni 10051
+  vlan 51
+  exit
+ exit
+#
+
 
 %endif%
 
-    
+###################################################
+#### GBP Configuration
+# all edge switches
+
+# define role ids
+gbp enable
+! implicit command:
+! gbp role infra 2
+gbp role contractor 101
+gbp role employee 102
+gbp role iot-ac 103
+
+
+#################################################
+# sw-edge1
+%if _sys_hostname=sw-edge1%
+
+
+##################
+### iot-ac ###
+##################
+## base config ##
+# don't care for arp (any)
+# ip only from default (outside world), no other roles
+class gbp-mac iot-ac-arp
+ 10 match any iot-ac arp count
+ exit
+
+class gbp-ip iot-ac-ip
+ 10 match ip default iot-ac count
+ exit
+  
+port-access gbp iot-ac
+ 10 class gbp-mac iot-ac-arp
+ 20 class gbp-ip iot-ac-ip
+ exit
+ 
+port-access role iot-ac
+ associate gbp iot-ac
+ vlan access 51
+ exit
+
+%endif%
+
+#################################################
+# sw-edge2
+%if _sys_hostname=sw-edge2%
+
+
+##################
+### contractor ###
+##################
+## base config ##
+# don't care for arp (any)
+# ip only from default (outside world), no other roles
+class gbp-mac contractor-arp
+ 10 match any contractor arp count
+ exit
+
+class gbp-ip contractor-ip
+ 10 match ip default contractor count
+ 20 match ip infra contractor count
+ exit
+
+port-access gbp contractor
+ 10 class gbp-mac contractor-arp
+ 20 class gbp-ip contractor-ip
+ exit
+ 
+port-access role contractor
+ associate gbp contractor
+ vlan access 51
+ exit
+ 
+##################
+### employee ###
+##################
+## base config ##
+# don't care for arp (any)
+# ip only from default (outside world), no other roles
+class gbp-mac employee-arp
+ 10 match any employee arp count
+ exit
+
+class gbp-ip employee-ip
+ 10 match ip default employee count
+ exit
+
+port-access gbp employee
+ 10 class gbp-mac employee-arp
+ 20 class gbp-ip employee-ip
+ exit
+
+port-access role employee
+ associate gbp employee
+ vlan access 51
+ exit
+
+
+%endif%
